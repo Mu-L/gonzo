@@ -383,18 +383,64 @@ func (p *Parser) ParseTimestamp(value interface{}, format string) (time.Time, er
 	case "", "auto":
 		// Try to auto-detect format
 		return parseTimestampAuto(valueStr)
+	// Protect against numbers or strings for unix, unix_ms and unix_ns types
 	case "unix":
-		if i, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
-			return time.Unix(i, 0), nil
+		var seconds int64
+		switch v := value.(type) {
+		case float64:
+			seconds = int64(v)
+		case int64:
+			seconds = v
+		case int:
+			seconds = int64(v)
+		case string:
+			if i, err := strconv.ParseInt(v, 10, 64); err == nil {
+				seconds = i
+			} else {
+				return time.Time{}, fmt.Errorf("failed to parse unix timestamp: %s", v)
+			}
+		default:
+			return time.Time{}, fmt.Errorf("unsupported type for unix timestamp: %T", value)
 		}
+		return time.Unix(seconds, 0), nil
 	case "unix_ms":
-		if i, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
-			return time.Unix(i/1000, (i%1000)*1e6), nil
+		var ms int64
+		switch v := value.(type) {
+		case float64:
+			ms = int64(v)
+		case int64:
+			ms = v
+		case int:
+			ms = int64(v)
+		case string:
+			if i, err := strconv.ParseInt(v, 10, 64); err == nil {
+				ms = i
+			} else {
+				return time.Time{}, fmt.Errorf("failed to parse unix_ms timestamp: %s", v)
+			}
+		default:
+			return time.Time{}, fmt.Errorf("unsupported type for unix_ms timestamp: %T", value)
 		}
+		return time.Unix(ms/1000, (ms%1000)*1e6), nil
 	case "unix_ns":
-		if i, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
-			return time.Unix(0, i), nil
+		var ns int64
+		switch v := value.(type) {
+		case float64:
+			ns = int64(v)
+		case int64:
+			ns = v
+		case int:
+			ns = int64(v)
+		case string:
+			if i, err := strconv.ParseInt(v, 10, 64); err == nil {
+				ns = i
+			} else {
+				return time.Time{}, fmt.Errorf("failed to parse unix_ns timestamp: %s", v)
+			}
+		default:
+			return time.Time{}, fmt.Errorf("unsupported type for unix_ns timestamp: %T", value)
 		}
+		return time.Unix(0, ns), nil	
 	case "rfc3339":
 		return time.Parse(time.RFC3339, valueStr)
 	default:
